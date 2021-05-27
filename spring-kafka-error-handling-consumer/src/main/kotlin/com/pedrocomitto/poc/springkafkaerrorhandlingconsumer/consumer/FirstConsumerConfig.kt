@@ -1,7 +1,8 @@
 package com.pedrocomitto.poc.springkafkaerrorhandlingconsumer.consumer
 
+import com.pedrocomitto.poc.springkafkaerrorhandlingconsumer.exception.DisposableException
 import com.pedrocomitto.poc.springkafkaerrorhandlingconsumer.exception.NonRetryableException
-import com.pedrocomitto.poc.springkafkaerrorhandlingconsumer.producer.FakeRabbitProducer
+import com.pedrocomitto.poc.springkafkaerrorhandlingconsumer.producer.FallbackComponent
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -16,11 +17,12 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer
 import org.springframework.kafka.listener.MessageListener
 import org.springframework.kafka.listener.RetryListener
 import org.springframework.kafka.listener.SeekToCurrentErrorHandler
+import org.springframework.util.backoff.ExponentialBackOff
 import org.springframework.util.backoff.FixedBackOff
 
 @Configuration
 class FirstConsumerConfig(
-    private val fakeRabbitProducer: FakeRabbitProducer
+    private val fallbackComponent: FallbackComponent
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -46,19 +48,23 @@ class FirstConsumerConfig(
     @Bean
     fun customErrorHandler(): SeekToCurrentErrorHandler? {
         return SeekToCurrentErrorHandler({ record: ConsumerRecord<*, *>, ex: Exception ->
-            log.info("Retries exhausted, trying to recover, exception=${ex.message}, record=$record")
+            log.info("Recovering message, message=${ex.message}, record=$record")
 
-            try {
-                fakeRabbitProducer.produce()
-            } catch (ex: Exception) {
-                log.error("Recovery failed, implement a fallback here")
+            if (ex.cause !is DisposableException) {
+
+                try {
+                    fallbackComponent.doSomething()
+                } catch (ex: Exception) {
+                    log.error("Recovery failed, implement a fallback here")
+                }
+
+            } else {
+                log.warn("DisposableException thrown, discarding. message=${ex.message}")
             }
 
-
-        }, FixedBackOff(5000, 10)) //
+        }, FixedBackOff(5000, 10))
             .apply { this.addNotRetryableExceptions(NonRetryableException::class.java) }
             .apply { this.setRetryListeners(FirstRetryListener()) }
-//            .apply { this.setResetStateOnRecoveryFailure(false) } // Set to false to immediately attempt to recover on the next attempt instead of repeating the BackOff cycle when recovery fails
     }
 
     private fun consumerProperties(): Map<String, Any> {

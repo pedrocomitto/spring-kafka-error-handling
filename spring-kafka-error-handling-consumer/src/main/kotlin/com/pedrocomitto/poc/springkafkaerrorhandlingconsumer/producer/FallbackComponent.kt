@@ -4,12 +4,12 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class FakeRabbitProducer {
+class FallbackComponent {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun produce() {
-        log.info("producing on RabbitMQ")
+    fun doSomething() {
+        log.info("fallback method")
     }
 
 }
