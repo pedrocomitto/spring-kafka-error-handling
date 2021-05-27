@@ -11,3 +11,6 @@ For instance, if you have only to consume and store data in a database, besides 
 ## Lessons learned
 
 - Set ```listenerContainer.containerProperties.ackMode = ContainerProperties.AckMode.RECORD``` to commit each record individually
+
+
+![image](https://user-images.githubusercontent.com/13872621/119908508-1f9ed780-bf29-11eb-9501-61c8428ef321.png)
