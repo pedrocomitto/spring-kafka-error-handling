@@ -7,10 +7,14 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer
 import org.springframework.kafka.listener.ContainerProperties
 import org.springframework.kafka.listener.ErrorHandler
 import org.springframework.kafka.listener.KafkaMessageListenerContainer
@@ -19,6 +23,7 @@ import org.springframework.kafka.listener.RetryListener
 import org.springframework.kafka.listener.SeekToCurrentErrorHandler
 import org.springframework.util.backoff.ExponentialBackOff
 import org.springframework.util.backoff.FixedBackOff
+import java.awt.Container
 
 @Configuration
 class FirstConsumerConfig(
@@ -27,28 +32,20 @@ class FirstConsumerConfig(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    companion object {
-        const val TOPIC_NAME = "first.topic"
+    @Bean
+    fun myContainer(): ConcurrentKafkaListenerContainerFactory<String, String> {
+        val factory = ConcurrentKafkaListenerContainerFactory<String, String>()
+
+        factory.consumerFactory = DefaultKafkaConsumerFactory(consumerProperties())
+        factory.containerProperties.ackMode = ContainerProperties.AckMode.RECORD // use AckMode.RECORD to commit each record individually
+        factory.setErrorHandler(customErrorHandler())
+
+        return factory
     }
 
-    @Bean
-    fun messageListenerContainer(firstConsumer: MessageListener<String, String>, customErrorHandler: ErrorHandler): KafkaMessageListenerContainer<String, String> {
-        val containerProperties = ContainerProperties(TOPIC_NAME)
-        containerProperties.messageListener = firstConsumer
-
-        val factory: ConsumerFactory<String, String> = DefaultKafkaConsumerFactory(consumerProperties())
-
-        val listenerContainer = KafkaMessageListenerContainer(factory, containerProperties)
-        listenerContainer.setErrorHandler(customErrorHandler)
-        listenerContainer.containerProperties.ackMode = ContainerProperties.AckMode.RECORD // use AckMode.RECORD to commit each record individually
-
-        return listenerContainer
-    }
-
-    @Bean
-    fun customErrorHandler(): SeekToCurrentErrorHandler? {
+    private fun customErrorHandler(): SeekToCurrentErrorHandler {
         return SeekToCurrentErrorHandler({ record: ConsumerRecord<*, *>, ex: Exception ->
-            log.info("Recovering message, message=${ex.message}, record=$record")
+            log.info("Recovering record, record=$record, exception=${ex.cause}")
 
             if (ex.cause !is DisposableException) {
 
@@ -62,7 +59,7 @@ class FirstConsumerConfig(
                 log.warn("DisposableException thrown, discarding. message=${ex.message}")
             }
 
-        }, FixedBackOff(5000, 10))
+        }, FixedBackOff(4500, 10))
             .apply { this.addNotRetryableExceptions(NonRetryableException::class.java) }
             .apply { this.setRetryListeners(FirstRetryListener()) }
     }
@@ -74,6 +71,7 @@ class FirstConsumerConfig(
         props[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.GROUP_ID_CONFIG] = "spring-kafka-error-handling"
+        props[ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG] = 5000
 
         return props
     }
