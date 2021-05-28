@@ -31,3 +31,4 @@ The ExponentialBackOff will retry infinitely by default. You just need to be sur
 
 Since version ```2.6.0``` there is no longer necessary to keep the total aggregate retry time less than ```max.poll.interval.ms```. In fact, the interval between retries **must be less than** ```max.poll.interval.ms``` to avoid rebalancing.
 
+- When using a ExponentialBackoOff, you must set the maxInterval less than the ```max.poll.interval.ms``` to avoid rebalancing.
