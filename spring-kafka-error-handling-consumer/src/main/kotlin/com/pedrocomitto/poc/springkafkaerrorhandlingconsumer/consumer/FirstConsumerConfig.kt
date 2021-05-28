@@ -63,8 +63,8 @@ class FirstConsumerConfig(
             }
 
         }, ExponentialBackOff(100, 1.5)
-                .apply { this.maxInterval = 300000 }
-                .apply { this.maxElapsedTime = 600000 })
+                .apply { this.maxInterval = 250000 }
+                .apply { this.maxElapsedTime = 6000000 })
             .apply { this.addNotRetryableExceptions(NonRetryableException::class.java) }
             .apply { this.setRetryListeners(FirstRetryListener()) }
     }
@@ -76,7 +76,6 @@ class FirstConsumerConfig(
         props[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.GROUP_ID_CONFIG] = "spring-kafka-error-handling"
-        props[ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG]
 
         return props
     }
