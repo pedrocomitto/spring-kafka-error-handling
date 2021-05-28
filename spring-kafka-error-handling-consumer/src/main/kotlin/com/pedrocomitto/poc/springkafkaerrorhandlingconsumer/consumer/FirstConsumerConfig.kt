@@ -21,9 +21,12 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer
 import org.springframework.kafka.listener.MessageListener
 import org.springframework.kafka.listener.RetryListener
 import org.springframework.kafka.listener.SeekToCurrentErrorHandler
+import org.springframework.retry.support.RetryTemplate
 import org.springframework.util.backoff.ExponentialBackOff
 import org.springframework.util.backoff.FixedBackOff
 import java.awt.Container
+import java.lang.IllegalArgumentException
+import java.util.function.BiFunction
 
 @Configuration
 class FirstConsumerConfig(
@@ -33,7 +36,7 @@ class FirstConsumerConfig(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Bean
-    fun myContainer(): ConcurrentKafkaListenerContainerFactory<String, String> {
+    fun firstContainer(): ConcurrentKafkaListenerContainerFactory<String, String> {
         val factory = ConcurrentKafkaListenerContainerFactory<String, String>()
 
         factory.consumerFactory = DefaultKafkaConsumerFactory(consumerProperties())
@@ -59,7 +62,9 @@ class FirstConsumerConfig(
                 log.warn("DisposableException thrown, discarding. message=${ex.message}")
             }
 
-        }, FixedBackOff(4500, 10))
+        }, ExponentialBackOff(100, 1.5)
+                .apply { this.maxInterval = 300000 }
+                .apply { this.maxElapsedTime = 600000 })
             .apply { this.addNotRetryableExceptions(NonRetryableException::class.java) }
             .apply { this.setRetryListeners(FirstRetryListener()) }
     }
@@ -71,7 +76,7 @@ class FirstConsumerConfig(
         props[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
         props[ConsumerConfig.GROUP_ID_CONFIG] = "spring-kafka-error-handling"
-        props[ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG] = 5000
+        props[ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG]
 
         return props
     }

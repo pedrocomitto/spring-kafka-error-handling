@@ -16,7 +16,7 @@ class FirstConsumer {
         const val TOPIC_NAME = "first.topic"
     }
 
-    @KafkaListener(topics = [TOPIC_NAME], containerFactory = "myContainer")
+    @KafkaListener(topics = [TOPIC_NAME], containerFactory = "firstContainer")
     fun consume(record: ConsumerRecord<String, String>) {
         log.info("M=consume, I=consuming message, record=$record")
         throw RuntimeException()
