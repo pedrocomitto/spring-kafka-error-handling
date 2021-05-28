@@ -13,6 +13,7 @@ For instance, if you have only to consume and store data in a database, besides 
 ## Lessons learned
 
 - Set ```listenerContainer.containerProperties.ackMode = ContainerProperties.AckMode.RECORD``` to commit each record individually
+- When using a ExponentialBackoOff, you must set the maxInterval less than the ```max.poll.interval.ms``` to avoid rebalancing.
 - The answer from Gary Russel below:
 
 Using stateful retry was specifically designed to be used with a STCEH to avoid a rebalance, before the STCEH supported back offs.
@@ -31,4 +32,3 @@ The ExponentialBackOff will retry infinitely by default. You just need to be sur
 
 Since version ```2.6.0``` there is no longer necessary to keep the total aggregate retry time less than ```max.poll.interval.ms```. In fact, the interval between retries **must be less than** ```max.poll.interval.ms``` to avoid rebalancing.
 
-- When using a ExponentialBackoOff, you must set the maxInterval less than the ```max.poll.interval.ms``` to avoid rebalancing.
