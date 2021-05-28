@@ -8,7 +8,7 @@ When you have a pretty straight forward actions like consumes and stores in a da
 
 For instance, if you have only to consume and store data in a database, besides the broker (and it would be a completely different case that is not going to be covered on this project), your only single failure point is definely the database. So, with your database down, if you keep polling messages from broker, you won't really have anything to do with them. The main point is: If the exception that prevented my first failed message of being consumed is an exception that is going to prevent the next ones too, why would I implement a non-blocking retry? With a non-blocking retry, the next messages will fail too, so there is no reason to poll more messages to end up failing in consuming them too.
 
-![image](https://user-images.githubusercontent.com/13872621/120021362-5a544e80-bfc1-11eb-9831-72c31fda9c6d.png)
+![image](https://user-images.githubusercontent.com/13872621/120021417-6b04c480-bfc1-11eb-92b7-99bc5f5ac9d9.png)
 
 ## Lessons learned
 
